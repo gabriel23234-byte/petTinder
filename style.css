@@ -1,0 +1,359 @@
+/* ==========================================
+   1. ARQUITETURA DE DESIGN E VARIÁVEIS DE TEMA
+   ========================================== */
+:root {
+    --bg-gradient: radial-gradient(circle at center, #0f1016 0%, #050508 100%);
+    --app-bg: #090a0f;
+    --card-bg: rgba(18, 19, 31, 0.65);
+    --card-pet-bg: #111218;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --border-color: rgba(255, 255, 255, 0.04);
+    --input-bg: #050508;
+    --navbar-bg: #0c0d14;
+    --shadow-color: rgba(0, 0, 0, 0.85);
+    --modal-overlay: rgba(5, 5, 8, 0.85);
+}
+
+/* Variáveis para o Modo Claro */
+[data-theme="light"] {
+    --bg-gradient: radial-gradient(circle at center, #f0f2f5 0%, #e4e7eb 100%);
+    --app-bg: #ffffff;
+    --card-bg: rgba(243, 244, 246, 0.9);
+    --card-pet-bg: #f9fafb;
+    --text-main: #1f2937;
+    --text-muted: #4b5563;
+    --border-color: rgba(0, 0, 0, 0.08);
+    --input-bg: #f3f4f6;
+    --navbar-bg: #f3f4f6;
+    --shadow-color: rgba(0, 0, 0, 0.15);
+    --modal-overlay: rgba(255, 255, 255, 0.9);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+body {
+    background: var(--bg-gradient);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 10px;
+    overflow-x: hidden;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 420px;
+    height: 870px;
+    max-height: 96vh;
+    background-color: var(--app-bg);
+    border-radius: 32px;
+    box-shadow: 0 25px 60px var(--shadow-color), 0 0 40px rgba(163, 38, 253, 0.12);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Botão do Alternador de Tema */
+.theme-toggle-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 10000;
+    background: rgba(163, 38, 253, 0.2);
+    border: 1px solid rgba(163, 38, 253, 0.4);
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* --- LOADING SCREEN CINEMATOGRÁFICA --- */
+.cinema-loader {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--modal-overlay);
+    backdrop-filter: blur(15px);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+}
+.cinema-loader.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+.loader-spinner {
+    width: 50px; height: 50px;
+    border: 3px solid rgba(163, 38, 253, 0.1);
+    border-top-color: #a326fd;
+    border-right-color: #f5af19;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+.loader-text {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #f5af19;
+    font-weight: 700;
+    animation: pulse 1s infinite alternate;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+/* Transição de Telas Assíncronas */
+.screen {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    padding: 20px;
+    overflow-y: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    transform: scale(0.96);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+    pointer-events: none;
+}
+
+.screen.active {
+    display: flex;
+    position: relative;
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+/* --- DESIGN DA TELA DE LOGIN / CADASTRO --- */
+.welcome-screen {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 15px;
+    padding: 35px 24px 25px 24px;
+    background: linear-gradient(180deg, rgba(163, 38, 253, 0.05) 0%, rgba(0,0,0,0) 40%);
+}
+
+.brand-block {
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.brand-title {
+    font-size: 2.8rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffe066 0%, #f5af19 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+}
+
+.brand-subtitle {
+    font-size: 0.7rem;
+    color: #a326fd;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    font-weight: 800;
+    margin-top: 2px;
+}
+
+.welcome-pet-images {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin: 5px 0;
+}
+
+.welcome-pet-images img {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(163, 38, 253, 0.4);
+    box-shadow: 0 4px 15px rgba(163, 38, 253, 0.2);
+}
+
+.auth-tabs {
+    display: flex;
+    width: 100%;
+    background: rgba(5, 5, 8, 0.2);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 2px;
+}
+
+.auth-tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.auth-tab-btn.active {
+    background: linear-gradient(135deg, rgba(163, 38, 253, 0.2), rgba(94, 15, 255, 0.2));
+    color: var(--text-main);
+    border: 1px solid rgba(163, 38, 253, 0.4);
+    box-shadow: 0 4px 15px rgba(163, 38, 253, 0.15);
+}
+
+.login-card {
+    width: 100%;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.auth-form-container {
+    display: none;
+}
+
+.auth-form-container.active {
+    display: block;
+}
+
+/* --- COMPONENTES DE FILTRO E BUSCA AVANÇADA --- */
+.search-drawer {
+    background: var(--card-bg);
+    border: 1px solid rgba(163, 38, 253, 0.2);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+}
+.search-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* --- INPUTS E PADRONIZAÇÃO DE COR --- */
+.input-group { margin-bottom: 14px; }
+.input-group label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; display: block; letter-spacing: 0.5px; }
+.input-group input, .input-group select, .input-group textarea {
+    width: 100%; padding: 11px 14px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-main); outline: none; font-size: 0.85rem; transition: all 0.2s ease;
+}
+.input-group input:focus, .input-group select:focus { border-color: #a326fd; box-shadow: 0 0 10px rgba(163, 38, 253, 0.2); }
+
+.btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: 0.2s; }
+.btn-tutor { background: linear-gradient(135deg, #a326fd, #5e0fff); color: #fff; box-shadow: 0 4px 20px rgba(163, 38, 253, 0.3); }
+.btn-tutor:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(163, 38, 253, 0.4); }
+
+/* --- DESIGN DOS CARDS DO TINDER COM DETALHES --- */
+.card-container { flex: 1; display: flex; justify-content: center; align-items: center; margin: 10px 0; min-height: 0; }
+.pet-card {
+    width: 100%; height: 100%; background-color: var(--card-pet-bg); border-radius: 24px; padding: 18px; display: flex; flex-direction: column; justify-content: flex-end; position: relative; background-size: cover; background-position: center; overflow: hidden; border: 1px solid var(--border-color);
+}
+
+.pet-card::after {
+    content: ''; position: absolute; left: 0; bottom: 0; right: 0; top: 0; 
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 50%, transparent 100%); 
+    z-index: 1;
+}
+[data-theme="light"] .pet-card::after {
+    background: linear-gradient(to top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.7) 50%, transparent 100%); 
+}
+
+.pet-info { position: relative; z-index: 2; max-height: 75%; overflow-y: auto; padding-right: 4px; color: #fff; }
+[data-theme="light"] .pet-info { color: #1f2937; }
+.pet-name-age { font-size: 1.5rem; font-weight: 800; }
+.pet-meta-row { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+.tag-pill { background: rgba(163, 38, 253, 0.18); border: 1px solid rgba(163, 38, 253, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 0.68rem; color: #d8b4fe; font-weight: 600; }
+.tag-pill.loc-pill { background: rgba(36, 142, 255, 0.15); border-color: rgba(36, 142, 255, 0.3); color: #7dd3fc; }
+[data-theme="light"] .tag-pill.loc-pill { color: #0369a1; }
+
+/* Status Rápidos de Vacina */
+.tag-pill.vac-sim { background: rgba(46, 204, 113, 0.2); border-color: #2ecc71; color: #2ecc71; }
+.tag-pill.vac-nao { background: rgba(231, 76, 60, 0.2); border-color: #e74c3c; color: #e74c3c; }
+
+.pet-technical-box {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 8px 12px; margin-top: 8px; font-size: 0.75rem; display: flex; flex-direction: column; gap: 4px; color: #cbd5e1;
+}
+[data-theme="light"] .pet-technical-box { background: rgba(0, 0, 0, 0.03); border-color: rgba(0,0,0,0.06); color: #4b5563; }
+.pet-technical-box strong { color: #f5af19; }
+
+.btn-more-details {
+    background: rgba(163, 38, 253, 0.25);
+    border: 1px solid #a326fd;
+    color: var(--text-main);
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 6px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+}
+
+/* MODAL DE DETALHES COMPLETOS DO PET */
+.pet-modal {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--modal-overlay); backdrop-filter: blur(15px);
+    z-index: 10005; display: none; flex-direction: column; padding: 25px;
+    overflow-y: auto;
+}
+.pet-modal.active { display: flex; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-top: 20px;}
+.modal-close { background: none; border: none; font-size: 1.5rem; color: var(--text-main); cursor: pointer; }
+.modal-body img { width: 100%; height: 200px; object-fit: cover; border-radius: 16px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+.modal-section { margin-bottom: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid var(--border-color); }
+[data-theme="light"] .modal-section { background: rgba(0,0,0,0.01); }
+.modal-section h4 { font-size: 0.85rem; color: #a326fd; text-transform: uppercase; margin-bottom: 5px; }
+.modal-section p { font-size: 0.85rem; line-height: 1.4; color: var(--text-main); }
+
+/* --- SELEÇÃO MULTIPLA E QUESTIONARIO --- */
+.multi-pet-selector {
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 12px; max-height: 130px; overflow-y: auto;
+}
+[data-theme="light"] .multi-pet-selector { background: rgba(0,0,0,0.02); }
+.checkbox-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
+.checkbox-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: #a326fd; }
+
+.quiz-section {
+    background: rgba(163, 38, 253, 0.05); border: 1px solid rgba(163, 38, 253, 0.15); border-radius: 12px; padding: 12px; margin-bottom: 15px;
+}
+.quiz-title { font-size: 0.8rem; font-weight: 800; color: #f5af19; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* --- HISTÓRICO AVANÇADO DE AUDITORIA --- */
+.audit-trail-card {
+    background: var(--card-pet-bg); border-left: 3px solid #a326fd; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 0.78rem; border-top: 1px solid var(--border-color);
+}
+.audit-timestamp { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 3px; font-weight: bold; }
+
+/* --- ELEMENTOS DE INTERFACE --- */
+.app-header { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; font-weight: 800; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+.actions-bar { display: flex; justify-content: center; gap: 20px; margin-bottom: 5px; }
+.btn-action { width: 50px; height: 50px; border-radius: 50%; border: none; background-color: var(--card-pet-bg); font-size: 1.2rem; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 6px 15px rgba(0,0,0,0.2); border: 1px solid var(--border-color); }
+.footer-nav { display: flex; justify-content: space-around; background: var(--navbar-bg); padding: 10px 0; border-top: 1px solid var(--border-color); flex-shrink: 0; }
+.nav-icon-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; gap: 4px; }
+.nav-icon-btn.active { color: #a326fd; }
+.scrollable-content { flex: 1; overflow-y: auto; padding-right: 2px; }
+#map { width: 100%; height: 180px; border-radius: 14px; margin-bottom: 10px; flex-shrink: 0; border: 1px solid var(--border-color); z-index: 10; }
+.ong-list-item { background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 6px; font-size: 0.8rem; }
+[data-theme="light"] .ong-list-item { background: rgba(0,0,0,0.02); }

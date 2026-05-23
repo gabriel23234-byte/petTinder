@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetTinder Cinematic Santarém 🐾</title>
+    <!-- CSS do Mapa Interativo Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Seu arquivo de estilos separado -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+
+    <div class="app-container">
+
+        <!-- ALTERNADOR DE TEMA GLOBAL -->
+        <button class="theme-toggle-btn" onclick="alternarTemaGlobal()">🌓 Tema</button>
+
+        <!-- KINETIC CINEMATIC LOADER -->
+        <div id="cinemaLoader" class="cinema-loader">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">Processando Requisição...</div>
+        </div>
+
+        <!-- MODAL INTERNO: DESCRIÇÃO DETALHADA DO PET -->
+        <div id="petDetailsModal" class="pet-modal">
+            <div class="modal-header">
+                <h3 id="modalPetNome" style="color:#f5af19; font-size: 1.6rem;">Nome do Pet</h3>
+                <button class="modal-close" onclick="fecharModalDetalhes()">✕</button>
+            </div>
+            <div class="modal-body">
+                <img id="modalPetFoto" src="" alt="Foto do pet">
+                <div class="modal-section">
+                    <h4>🧬 Raça e Características</h4>
+                    <p id="modalPetFicha">Porte, idade e espécie.</p>
+                </div>
+                <div class="modal-section">
+                    <h4>💉 Status de Vacinação</h4>
+                    <p id="modalPetVacinaStatus">Informações sobre vacinas.</p>
+                </div>
+                <div class="modal-section">
+                    <h4>😋 Alimentação Recomendada</h4>
+                    <p id="modalPetRacao">Rações indicadas para o perfil.</p>
+                </div>
+                <div class="modal-section">
+                    <h4>📋 Histórico e Biografia</h4>
+                    <p id="modalPetBio">Detalhes da trajetória do animal.</p>
+                </div>
+                <div class="modal-section">
+                    <h4>🩺 Quadro Clínico e Saúde</h4>
+                    <p id="modalPetSaude">Vacinas adicionais e tratamentos aplicados.</p>
+                </div>
+                <button class="btn btn-tutor" style="margin-top: 10px;" id="modalBtnAdotar">🐾 Adotar este Pet</button>
+            </div>
+        </div>
+
+        <!-- 1. TELA INICIAL: LOGIN E CADASTRO UNIFICADOS -->
+        <div id="loginScreen" class="screen active welcome-screen">
+            <div class="brand-block">
+                <div class="brand-title">PetTinder</div>
+                <div class="brand-subtitle">Santarém Animal Match</div>
+            </div>
+
+            <div class="welcome-pet-images">
+                <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=150" alt="Pet 1">
+                <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=150" alt="Pet 2">
+                <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?w=150" alt="Pet 3">
+            </div>
+
+            <div class="auth-tabs">
+                <button id="tabLogin" class="auth-tab-btn active" onclick="alternarFormularioAutenticacao('login')">Acessar Conta</button>
+                <button id="tabCadastro" class="auth-tab-btn" onclick="alternarFormularioAutenticacao('cadastro')">Novo Registro</button>
+            </div>
+
+            <div class="login-card">
+                <div id="formLogin" class="auth-form-container active">
+                    <div class="input-group">
+                        <label>E-mail de Acesso</label>
+                        <input type="email" id="tutorEmail" value="tutor@santarem.com">
+                    </div>
+                    <div class="input-group">
+                        <label>Senha</label>
+                        <input type="password" id="tutorPassword" value="123456">
+                    </div>
+                    <button class="btn btn-tutor" onclick="autenticarTutor('login')">Entrar no Ecossistema</button>
+                </div>
+
+                <div id="formCadastro" class="auth-form-container">
+                    <div class="input-group">
+                        <label>Nome Completo</label>
+                        <input type="text" id="cadNome" placeholder="Ex: João Silva">
+                    </div>
+                    <div class="input-group">
+                        <label>E-mail Válido</label>
+                        <input type="email" id="cadEmail" placeholder="nome@provedor.com">
+                    </div>
+                    <div class="input-group">
+                        <label>Defina uma Senha</label>
+                        <input type="password" id="cadPassword" placeholder="No mínimo 6 dígitos">
+                    </div>
+                    <button class="btn btn-tutor" onclick="autenticarTutor('cadastro')">Finalizar e Criar Perfil</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. TELA DO FEED (EXPLORAR) -->
+        <div id="feedScreen" class="screen">
+            <div class="app-header">
+                <span style="color:#f5af19;">🌌 Explorar Animais</span>
+                <span style="font-size:0.75rem; color:#a326fd; cursor:pointer;" onclick="limparFiltrosDeBusca()">Resetar</span>
+            </div>
+
+            <div class="search-drawer" style="margin-top: 10px;">
+                <div class="search-grid">
+                    <div class="input-group"><label>Raça</label><input type="text" id="filterRaca" placeholder="Ex: Pitbull" oninput="filtrarCatalogoDePets()"></div>
+                    <div class="input-group"><label>Idade Máxima</label><input type="number" id="filterIdade" placeholder="Ex: 5" oninput="filtrarCatalogoDePets()"></div>
+                    <div class="input-group">
+                        <label>Porte</label>
+                        <select id="filterPorte" onchange="filtrarCatalogoDePets()">
+                            <option value="">Todos</option><option value="Pequeno">Pequeno</option><option value="Médio">Médio</option><option value="Grande">Grande</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Localização (Santarém)</label>
+                        <select id="filterLocalizacao" onchange="filtrarCatalogoDePets()">
+                            <option value="">Todas as Unidades</option>
+                            <option value="ONG Centro">ONG Centro</option>
+                            <option value="ONG Alter do Chão">ONG Alter do Chão</option>
+                            <option value="ONG Diamantino">ONG Diamantino</option>
+                            <option value="ONG Prainha">ONG Prainha</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-container">
+                <div class="pet-card" id="petCard">
+                    <div class="pet-info">
+                        <div class="pet-name-age" id="petNomeIdade">Buscando...</div>
+                        <div class="pet-meta-row" id="petTagsContainer"></div>
+                        <div class="pet-technical-box" id="petTechBox"></div>
+                        <button class="btn-more-details" onclick="abrirModalDetalhes()">🔎 Ver Descrição Completa & Histórico</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions-bar">
+                <button class="btn-action" style="color:#e74c3c; border:1px solid rgba(231,76,60,0.2);" onclick="rotacionarPetNoFeed()">❌</button>
+                <button class="btn-action" style="color:#2ecc71; border:1px solid rgba(46, 204, 113, 0.2);" onclick="vincularMatchDoTutor()">❤️</button>
+            </div>
+        </div>
+
+        <!-- 3. AGENDAMENTOS E QUESTIONÁRIO DE TRIAGEM -->
+        <div id="scheduleScreen" class="screen">
+            <div class="app-header"><span style="color:#a326fd;">📅 Solicitação de Adoção</span></div>
+            <div class="scrollable-content" style="margin-top:15px;">
+                
+                <label style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display:block; margin-bottom:4px;">Selecione os Pets Desejados</label>
+                <div class="multi-pet-selector" id="agendaMultiPetContainer"></div>
+
+                <div class="quiz-section">
+                    <div class="quiz-title">📋 Formulário do Adotante</div>
+                    <div class="input-group">
+                        <label>Tipo de Residência</label>
+                        <select id="quizCasa">
+                            <option value="Casa com quintal amplo">Casa com quintal amplo</option>
+                            <option value="Apartamento">Apartamento</option>
+                            <option value="Sítio / Chácara">Sítio / Chácara</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Possui outros animais de estimação?</label>
+                        <select id="quizOutrosPets">
+                            <option value="Não possui">Não possui</option>
+                            <option value="Sim, cachorros">Sim, cachorros</option>
+                            <option value="Sim, gatos">Sim, gatos</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Tempo livre diário para dedicação</label>
+                        <select id="quizTempo">
+                            <option value="Mais de 4 horas">Mais de 4 horas</option>
+                            <option value="De 1 a 3 horas">De 1 a 3 horas</option>
+                            <option value="Pouco tempo (Trabalho integral)">Pouco tempo (Trabalho integral)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="search-grid">
+                    <div class="input-group"><label>Data da Visita</label><input type="date" id="agendaData"></div>
+                    <div class="input-group">
+                        <label>Horário</label>
+                        <select id="agendaHorario"><option value="09:00">09:00h</option><option value="11:00">11:00h</option><option value="15:00">15:00h</option></select>
+                    </div>
+                </div>
+
+                <button class="btn btn-tutor" onclick="processarAgendamentoDoTutor()" style="margin-top: 5px;">Submeter Perfil & Reservar</button>
+            </div>
+        </div>
+
+        <!-- 4. MATCHES COLETADOS -->
+        <div id="matchesScreen" class="screen">
+            <div class="app-header"><span style="color:#a326fd;">❤️ Conexões Aceitas</span></div>
+            <div id="listaMatchesContainer" class="scrollable-content" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- 5. MAPA DAS UNIDADES -->
+        <div id="ongsScreen" class="screen">
+            <div class="app-header"><span style="color:#248eff;">🗺️ Rede de Proteção Santarém</span></div>
+            <div id="map" style="margin-top: 12px;"></div>
+            <div id="ongsListContainer" class="scrollable-content"></div>
+        </div>
+
+        <!-- 6. PERFIL LOGADO -->
+        <div id="profileScreen" class="screen">
+            <div class="app-header"><span style="color:var(--text-main);">👤 Auditoria & Perfil</span></div>
+            <div class="scrollable-content" style="margin-top:15px;">
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <h3 id="perfilNomeTutor">-</h3>
+                    <p id="perfilEmailTutor" style="font-size:0.75rem; color:#a326fd;"></p>
+                </div>
+                <h4 style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; letter-spacing:1px;">📜 Registro Detalhado de Atividades</h4>
+                <div id="auditoriaContainer"></div>
+                <button class="btn" style="background:var(--card-pet-bg); border: 1px solid var(--border-color); color:var(--text-main); margin-top:15px;" onclick="sairDoSistema()">Efetuar Logout</button>
+            </div>
+        </div>
+
+        <!-- BARRA DE NAVEGAÇÃO -->
+        <div class="footer-nav" id="appNavbar" style="display: none;">
+            <button id="navFeed" class="nav-icon-btn" onclick="navegarComTransicao('feedScreen')">🌌<span>Explorar</span></button>
+            <button id="navMatches" class="nav-icon-btn" onclick="navegarComTransicao('matchesScreen')">❤️<span>Matches</span></button>
+            <button id="navAgenda" class="nav-icon-btn" onclick="navegarComTransicao('scheduleScreen')">📅<span>Adotar</span></button>
+            <button id="navMap" class="nav-icon-btn" onclick="navegarComTransicao('ongsScreen')">🗺️<span>ONGs STM</span></button>
+            <button id="navProfile" class="nav-icon-btn" onclick="navegarComTransicao('profileScreen')">👤<span>Perfil</span></button>
+        </div>
+
+    </div>
+
+    <!-- JS do Mapa Interativo Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Seu arquivo script separado -->
+    <script src="script.js"></script>
+</body>
+</html>
