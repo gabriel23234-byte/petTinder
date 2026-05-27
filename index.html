@@ -3,18 +3,342 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PetTinder Cinematic Santarém 🐾</title>
+    <title>PetLar Santarém 🐾</title>
     <!-- CSS do Mapa Interativo Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Seu arquivo de estilos separado -->
-    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ==========================================
+           1. ARQUITETURA DE DESIGN E GRID GLOBAL
+           ========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #0f1016 0%, #050508 100%);
+            color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            height: 870px;
+            max-height: 96vh;
+            background-color: #090a0f;
+            border-radius: 32px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(163, 38, 253, 0.12);
+            overflow: hidden;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- LOADING SCREEN CINEMATOGRÁFICA --- */
+        .cinema-loader {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 8, 0.85);
+            backdrop-filter: blur(15px);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .cinema-loader.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .loader-spinner {
+            width: 50px; height: 50px;
+            border: 3px solid rgba(163, 38, 253, 0.1);
+            border-top-color: #a326fd;
+            border-right-color: #f5af19;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        .loader-text {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #ffe066;
+            font-weight: 700;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+        /* Transição de Telas Assíncronas */
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            padding: 20px;
+            overflow-y: auto;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transform: scale(0.96);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+            pointer-events: none;
+        }
+
+        .screen.active {
+            display: flex;
+            position: relative;
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        /* --- DESIGN ORGANIZADO DA TELA DE LOGIN --- */
+        .welcome-screen {
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 24px;
+            background: linear-gradient(180deg, rgba(163, 38, 253, 0.08) 0%, rgba(5, 5, 8, 0) 50%);
+        }
+
+        .brand-block {
+            text-align: center;
+            width: 100%;
+        }
+
+        .brand-title {
+            font-size: 2.6rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffe066 0%, #f5af19 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+        }
+
+        .brand-subtitle {
+            font-size: 0.7rem;
+            color: #a326fd;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+
+        /* Carrossel estático de imagens de pets */
+        .welcome-pet-images {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .welcome-pet-images img {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(163, 38, 253, 0.3);
+            box-shadow: 0 4px 20px rgba(163, 38, 253, 0.15);
+        }
+
+        /* Abas de Navegação (Login / Cadastro) */
+        .auth-tabs {
+            display: flex;
+            width: 100%;
+            background: rgba(5, 5, 8, 0.8);
+            padding: 4px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            margin-bottom: 16px;
+        }
+
+        .auth-tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: #8e93a6;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .auth-tab-btn.active {
+            background: linear-gradient(135deg, rgba(163, 38, 253, 0.25), rgba(94, 15, 255, 0.25));
+            color: #fff;
+            border: 1px solid rgba(163, 38, 253, 0.4);
+            box-shadow: 0 4px 15px rgba(163, 38, 253, 0.15);
+        }
+
+        .login-card {
+            width: 100%;
+            background: rgba(18, 19, 31, 0.55);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-form-container {
+            display: none;
+        }
+
+        .auth-form-container.active {
+            display: block;
+        }
+
+        /* --- PROVEDORES DE LOGIN SOCIAL --- */
+        .social-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #555868;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        .social-divider::before, .social-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .social-divider:not(:empty)::before { margin-right: .5em; }
+        .social-divider:not(:empty)::after { margin-left: .5em; }
+
+        .social-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn-social {
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-social:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-social img {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* --- COMPONENTES DE FILTRO E BUSCA AVANÇADA --- */
+        .search-drawer {
+            background: rgba(18, 19, 31, 0.9);
+            border: 1px solid rgba(163, 38, 253, 0.2);
+            border-radius: 16px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .search-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        /* --- INPUTS E PADRONIZAÇÃO DE COR --- */
+        .input-group { margin-bottom: 14px; }
+        .input-group label { font-size: 0.65rem; color: #9ca3af; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; display: block; letter-spacing: 0.5px; }
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%; padding: 11px 14px; background-color: #050508; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; color: #fff; outline: none; font-size: 0.85rem; transition: all 0.2s ease;
+        }
+        .input-group input:focus, .input-group select:focus { border-color: #a326fd; box-shadow: 0 0 10px rgba(163, 38, 253, 0.2); }
+
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; transition: 0.2s; }
+        .btn-tutor { background: linear-gradient(135deg, #a326fd, #5e0fff); color: #fff; box-shadow: 0 4px 20px rgba(163, 38, 253, 0.3); }
+        .btn-tutor:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(163, 38, 253, 0.4); }
+
+        /* --- DESIGN DOS CARDS COM DETALHES --- */
+        .card-container { flex: 1; display: flex; justify-content: center; align-items: center; margin: 10px 0; min-height: 0; }
+        .pet-card {
+            width: 100%; height: 100%; background-color: #111218; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; justify-content: flex-end; position: relative; background-size: cover; background-position: center; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pet-card::after {
+            content: ''; position: absolute; left: 0; bottom: 0; right: 0; top: 0; background: linear-gradient(to top, #090a0f 0%, rgba(9,10,15,0.9) 60%, transparent 100%); z-index: 1;
+        }
+        .pet-info { position: relative; z-index: 2; max-height: 75%; overflow-y: auto; padding-right: 4px; }
+        .pet-name-age { font-size: 1.5rem; font-weight: 800; }
+        .pet-meta-row { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+        .tag-pill { background: rgba(163, 38, 253, 0.18); border: 1px solid rgba(163, 38, 253, 0.3); padding: 3px 8px; border-radius: 6px; font-size: 0.68rem; color: #d8b4fe; font-weight: 600; }
+        .tag-pill.loc-pill { background: rgba(36, 142, 255, 0.15); border-color: rgba(36, 142, 255, 0.3); color: #7dd3fc; }
+        
+        /* Box de Ficha Técnico-Sanitária Expandida */
+        .pet-technical-box {
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 12px; margin-top: 8px; font-size: 0.75rem; display: flex; flex-direction: column; gap: 4px; color: #cbd5e1;
+        }
+        .pet-technical-box strong { color: #f5af19; }
+
+        /* --- SELEÇÃO MULTIPLA E QUESTIONARIO --- */
+        .multi-pet-selector {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 12px; margin-bottom: 12px; max-height: 130px; overflow-y: auto;
+        }
+        .checkbox-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 0.85rem; }
+        .checkbox-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: #a326fd; }
+        
+        .quiz-section {
+            background: rgba(163, 38, 253, 0.05); border: 1px solid rgba(163, 38, 253, 0.15); border-radius: 12px; padding: 12px; margin-bottom: 15px;
+        }
+        .quiz-title { font-size: 0.8rem; font-weight: 800; color: #ffe066; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- HISTÓRICO AVANÇADO DE AUDITORIA --- */
+        .audit-trail-card {
+            background: rgba(10, 11, 18, 0.9); border-left: 3px solid #a326fd; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 0.78rem; border-top: 1px solid rgba(255,255,255,0.02);
+        }
+        .audit-timestamp { font-size: 0.65rem; color: #6b7280; margin-bottom: 3px; font-weight: bold; }
+
+        /* --- ELEMENTOS DE INTERFACE --- */
+        .app-header { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; font-weight: 800; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
+        .actions-bar { display: flex; justify-content: center; gap: 20px; margin-bottom: 5px; }
+        .btn-action { width: 50px; height: 50px; border-radius: 50%; border: none; background-color: #111218; font-size: 1.2rem; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
+        .footer-nav { display: flex; justify-content: space-around; background: #0c0d14; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
+        .nav-icon-btn { background: none; border: none; color: #555868; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 0.65rem; gap: 4px; }
+        .nav-icon-btn.active { color: #a326fd; }
+        .scrollable-content { flex: 1; overflow-y: auto; padding-right: 2px; }
+        #map { width: 100%; height: 180px; border-radius: 14px; margin-bottom: 10px; flex-shrink: 0; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .ong-list-item { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin-bottom: 6px; font-size: 0.8rem; }
+    </style>
 </head>
-<body data-theme="dark">
+<body>
 
     <div class="app-container">
-
-        <!-- ALTERNADOR DE TEMA GLOBAL -->
-        <button class="theme-toggle-btn" onclick="alternarTemaGlobal()">🌓 Tema</button>
 
         <!-- KINETIC CINEMATIC LOADER -->
         <div id="cinemaLoader" class="cinema-loader">
@@ -22,91 +346,77 @@
             <div class="loader-text">Processando Requisição...</div>
         </div>
 
-        <!-- MODAL INTERNO: DESCRIÇÃO DETALHADA DO PET -->
-        <div id="petDetailsModal" class="pet-modal">
-            <div class="modal-header">
-                <h3 id="modalPetNome" style="color:#f5af19; font-size: 1.6rem;">Nome do Pet</h3>
-                <button class="modal-close" onclick="fecharModalDetalhes()">✕</button>
-            </div>
-            <div class="modal-body">
-                <img id="modalPetFoto" src="" alt="Foto do pet">
-                <div class="modal-section">
-                    <h4>🧬 Raça e Características</h4>
-                    <p id="modalPetFicha">Porte, idade e espécie.</p>
-                </div>
-                <div class="modal-section">
-                    <h4>💉 Status de Vacinação</h4>
-                    <p id="modalPetVacinaStatus">Informações sobre vacinas.</p>
-                </div>
-                <div class="modal-section">
-                    <h4>😋 Alimentação Recomendada</h4>
-                    <p id="modalPetRacao">Rações indicadas para o perfil.</p>
-                </div>
-                <div class="modal-section">
-                    <h4>📋 Histórico e Biografia</h4>
-                    <p id="modalPetBio">Detalhes da trajetória do animal.</p>
-                </div>
-                <div class="modal-section">
-                    <h4>🩺 Quadro Clínico e Saúde</h4>
-                    <p id="modalPetSaude">Vacinas adicionais e tratamentos aplicados.</p>
-                </div>
-                <button class="btn btn-tutor" style="margin-top: 10px;" id="modalBtnAdotar">🐾 Adotar este Pet</button>
-            </div>
-        </div>
-
-        <!-- 1. TELA INICIAL: LOGIN E CADASTRO UNIFICADOS -->
+        <!-- 1. TELA INICIAL: LOGIN E CADASTRO ORGANIZADOS -->
         <div id="loginScreen" class="screen active welcome-screen">
             <div class="brand-block">
-                <div class="brand-title">PetTinder</div>
-                <div class="brand-subtitle">Santarém Animal Match</div>
+                <div class="brand-title">PetLar Santarém</div>
+                <div class="brand-subtitle">Central de Adoções de Animais</div>
             </div>
 
+            <!-- Carrossel de Fotos de Pets -->
             <div class="welcome-pet-images">
                 <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=150" alt="Pet 1">
                 <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=150" alt="Pet 2">
                 <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?w=150" alt="Pet 3">
             </div>
 
-            <div class="auth-tabs">
-                <button id="tabLogin" class="auth-tab-btn active" onclick="alternarFormularioAutenticacao('login')">Acessar Conta</button>
-                <button id="tabCadastro" class="auth-tab-btn" onclick="alternarFormularioAutenticacao('cadastro')">Novo Registro</button>
-            </div>
-
             <div class="login-card">
+                <!-- Abas Alternáveis -->
+                <div class="auth-tabs">
+                    <button id="tabLogin" class="auth-tab-btn active" onclick="alternarFormularioAutenticacao('login')">Entrar</button>
+                    <button id="tabCadastro" class="auth-tab-btn" onclick="alternarFormularioAutenticacao('cadastro')">Cadastrar</button>
+                </div>
+
+                <!-- FORMULÁRIO DE LOGIN -->
                 <div id="formLogin" class="auth-form-container active">
                     <div class="input-group">
                         <label>E-mail de Acesso</label>
                         <input type="email" id="tutorEmail" value="tutor@santarem.com">
                     </div>
-                    <div class="input-group">
+                    <div class="input-group" style="margin-bottom: 20px;">
                         <label>Senha</label>
                         <input type="password" id="tutorPassword" value="123456">
                     </div>
-                    <button class="btn btn-tutor" onclick="autenticarTutor('login')">Entrar no Ecossistema</button>
+                    <button class="btn btn-tutor" onclick="autenticarTutor('login')">Acessar Sistema</button>
                 </div>
 
+                <!-- FORMULÁRIO DE CADASTRO -->
                 <div id="formCadastro" class="auth-form-container">
                     <div class="input-group">
                         <label>Nome Completo</label>
                         <input type="text" id="cadNome" placeholder="Ex: João Silva">
                     </div>
                     <div class="input-group">
-                        <label>E-mail Válido</label>
+                        <label>E-mail</label>
                         <input type="email" id="cadEmail" placeholder="nome@provedor.com">
                     </div>
-                    <div class="input-group">
+                    <div class="input-group" style="margin-bottom: 20px;">
                         <label>Defina uma Senha</label>
-                        <input type="password" id="cadPassword" placeholder="No mínimo 6 dígitos">
+                        <input type="password" id="cadPassword" placeholder="Mínimo de 6 dígitos">
                     </div>
-                    <button class="btn btn-tutor" onclick="autenticarTutor('cadastro')">Finalizar e Criar Perfil</button>
+                    <button class="btn btn-tutor" onclick="autenticarTutor('cadastro')">Criar Perfil Institutional</button>
+                </div>
+
+                <!-- SEÇÃO DE AUTENTICAÇÃO SOCIAL -->
+                <div class="social-divider">Ou conecte-se com</div>
+
+                <div class="social-buttons-container">
+                    <button class="btn-social" onclick="autenticarSocial('Google')">
+                        <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" alt="Google">
+                        Conta do Google
+                    </button>
+                    <button class="btn-social" onclick="autenticarSocial('Apple')">
+                        <img src="https://cdn-icons-png.flaticon.com/512/0/747.png" alt="Apple" style="filter: invert(1);">
+                        Apple ID
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- 2. TELA DO FEED (EXPLORAR) -->
+        <!-- 2. TELA DO FEED COM BUSCA AVANÇADA MULTI-FILTRO -->
         <div id="feedScreen" class="screen">
             <div class="app-header">
-                <span style="color:#f5af19;">🌌 Explorar Animais</span>
+                <span style="color:#ffe066;">🌌 Explorar Animais</span>
                 <span style="font-size:0.75rem; color:#a326fd; cursor:pointer;" onclick="limparFiltrosDeBusca()">Resetar</span>
             </div>
 
@@ -139,7 +449,6 @@
                         <div class="pet-name-age" id="petNomeIdade">Buscando...</div>
                         <div class="pet-meta-row" id="petTagsContainer"></div>
                         <div class="pet-technical-box" id="petTechBox"></div>
-                        <button class="btn-more-details" onclick="abrirModalDetalhes()">🔎 Ver Descrição Completa & Histórico</button>
                     </div>
                 </div>
             </div>
@@ -155,9 +464,10 @@
             <div class="app-header"><span style="color:#a326fd;">📅 Solicitação de Adoção</span></div>
             <div class="scrollable-content" style="margin-top:15px;">
                 
-                <label style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display:block; margin-bottom:4px;">Selecione os Pets Desejados</label>
+                <label style="font-size: 0.65rem; color: #9ca3af; text-transform: uppercase; font-weight: 700; display:block; margin-bottom:4px;">Selecione os Pets Desejados (Seleção Múltipla)</label>
                 <div class="multi-pet-selector" id="agendaMultiPetContainer"></div>
 
+                <!-- QUESTIONÁRIO DO USUÁRIO -->
                 <div class="quiz-section">
                     <div class="quiz-title">📋 Formulário do Adotante</div>
                     <div class="input-group">
@@ -169,7 +479,7 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label>Possui outros animais de estimação?</label>
+                        <label>Possui outros animais?</label>
                         <select id="quizOutrosPets">
                             <option value="Não possui">Não possui</option>
                             <option value="Sim, cachorros">Sim, cachorros</option>
@@ -177,7 +487,7 @@
                         </select>
                     </div>
                     <div class="input-group">
-                        <label>Tempo livre diário para dedicação</label>
+                        <label>Tempo livre diário</label>
                         <select id="quizTempo">
                             <option value="Mais de 4 horas">Mais de 4 horas</option>
                             <option value="De 1 a 3 horas">De 1 a 3 horas</option>
@@ -198,37 +508,37 @@
             </div>
         </div>
 
-        <!-- 4. MATCHES COLETADOS -->
+        <!-- 4. ADOÇÕES INTERESSADAS -->
         <div id="matchesScreen" class="screen">
-            <div class="app-header"><span style="color:#a326fd;">❤️ Conexões Aceitas</span></div>
+            <div class="app-header"><span style="color:#a326fd;">❤️ Intenções de Adoção</span></div>
             <div id="listaMatchesContainer" class="scrollable-content" style="margin-top: 15px;"></div>
         </div>
 
-        <!-- 5. MAPA DAS UNIDADES -->
+        <!-- 5. MAPA DAS UNIDADES ADAPTADO PARA SANTARÉM -->
         <div id="ongsScreen" class="screen">
             <div class="app-header"><span style="color:#248eff;">🗺️ Rede de Proteção Santarém</span></div>
             <div id="map" style="margin-top: 12px;"></div>
             <div id="ongsListContainer" class="scrollable-content"></div>
         </div>
 
-        <!-- 6. PERFIL LOGADO -->
+        <!-- 6. PERFIL LOGADO COM HISTÓRICO EXPANDIDO -->
         <div id="profileScreen" class="screen">
-            <div class="app-header"><span style="color:var(--text-main);">👤 Auditoria & Perfil</span></div>
+            <div class="app-header"><span style="color:#fff;">👤 Auditoria & Perfil</span></div>
             <div class="scrollable-content" style="margin-top:15px;">
                 <div style="text-align: center; margin-bottom: 15px;">
                     <h3 id="perfilNomeTutor">-</h3>
                     <p id="perfilEmailTutor" style="font-size:0.75rem; color:#a326fd;"></p>
                 </div>
-                <h4 style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; letter-spacing:1px;">📜 Registro Detalhado de Atividades</h4>
+                <h4 style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; margin-bottom:10px; letter-spacing:1px;">📜 Registro Detalhado de Atividades</h4>
                 <div id="auditoriaContainer"></div>
-                <button class="btn" style="background:var(--card-pet-bg); border: 1px solid var(--border-color); color:var(--text-main); margin-top:15px;" onclick="sairDoSistema()">Efetuar Logout</button>
+                <button class="btn" style="background:#222; color:#fff; margin-top:15px;" onclick="sairDoSistema()">Efetuar Logout</button>
             </div>
         </div>
 
         <!-- BARRA DE NAVEGAÇÃO -->
         <div class="footer-nav" id="appNavbar" style="display: none;">
             <button id="navFeed" class="nav-icon-btn" onclick="navegarComTransicao('feedScreen')">🌌<span>Explorar</span></button>
-            <button id="navMatches" class="nav-icon-btn" onclick="navegarComTransicao('matchesScreen')">❤️<span>Matches</span></button>
+            <button id="navMatches" class="nav-icon-btn" onclick="navegarComTransicao('matchesScreen')">❤️<span>Adoção</span></button>
             <button id="navAgenda" class="nav-icon-btn" onclick="navegarComTransicao('scheduleScreen')">📅<span>Adotar</span></button>
             <button id="navMap" class="nav-icon-btn" onclick="navegarComTransicao('ongsScreen')">🗺️<span>ONGs STM</span></button>
             <button id="navProfile" class="nav-icon-btn" onclick="navegarComTransicao('profileScreen')">👤<span>Perfil</span></button>
@@ -236,9 +546,361 @@
 
     </div>
 
-    <!-- JS do Mapa Interativo Leaflet -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Seu arquivo script separado -->
-    <script src="script.js"></script>
+    <script>
+        // BANCO DE DADOS ATUALIZADO COM ESTRUTURA SANITÁRIA COMPLETA
+        let bancoDePets = [
+            { id: 101, nome: "Thor", idade: 3, especie: "Cachorro", raca: "Pastor Alemão Mix", porte: "Grande", localizacao: "ONG Centro", saude: "Vacinado Antirrábica e V10, Vermifugado", energia: "Alta", socializacao: "Sociável com cães, arredio com gatos", bio: "Resgatado próximo à Orla de Santarém. Muito protetor, excelente resposta a comandos básicos e ama nadar.", foto: "https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?w=400" },
+            { id: 102, nome: "Natasha", idade: 2, especie: "Gato", raca: "Siamês", porte: "Pequeno", localizacao: "ONG Alter do Chão", saude: "Castrada, Testada FIV/FELV Negativo", energia: "Baixa", socializacao: "Extremamente dócil com humanos e outros felinos", bio: "Encontrada na região de mata em Alter. Muito carinhosa, dócil com crianças e prefere ambientes silenciosos.", foto: "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400" },
+            { id: 103, nome: "Pipoca", idade: 1, especie: "Cachorro", raca: "Vira-Lata (SRD)", porte: "Médio", localizacao: "ONG Diamantino", saude: "Primeira dose da V10 aplicada, castração agendada", energia: "Alta", socializacao: "Excelente com crianças e outros animais", bio: "Resgatada de um terreno baldio no Diamantino. Brincalhona, cheia de vida e excelente para casas com quintal.", foto: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=400" },
+            { id: 104, nome: "Barão", idade: 4, especie: "Cachorro", raca: "Pitbull Mix", porte: "Grande", localizacao: "ONG Prainha", saude: "Tratamento de Leishmaniose Negativado/Controlado, Vacinado", energia: "Moderada", socializacao: "Amigável, prefere ser o único cão da casa", bio: "Resgatado na Prainha. Um gigante gentil que adora dormir na sombra e passear no fim da tarde.", foto: "https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400" }
+        ];
+
+        // COORDENADAS REAIS E GEOLOCALIZAÇÃO EM SANTARÉM
+        const ongsSantarem = [
+            { nome: "ONG Centro - Resgate Urbano", lat: -2.417242, lng: -54.711832, local: "Av. Tapajós, Centro (Próximo à Orla)" },
+            { nome: "ONG Alter do Chão - Protetores da Vila", lat: -2.484210, lng: -54.896750, local: "Rodovia Fernando Guilhon, KM 18 (Acesso a Alter)" },
+            { nome: "ONG Diamantino - Abrigo Patas Amigas", lat: -2.449635, lng: -54.718420, local: "Av. Moaçara, Bairro Diamantino" },
+            { nome: "ONG Prainha - Lar de Passagem", lat: -2.427310, lng: -54.693150, local: "Av. Marechal Rondon, Bairro Prainha" }
+        ];
+
+        let filtrados = [...bancoDePets];
+        let agendamentosGlobais = [];
+        let logsDeAuditoria = {};
+        let usuarioAtivo = null;
+        let indexAtual = 0;
+        let mapaInstanciado = null;
+
+        // Controle das abas de Login e Cadastro
+        function alternarFormularioAutenticacao(modo) {
+            document.getElementById('tabLogin').classList.remove('active');
+            document.getElementById('tabCadastro').classList.remove('active');
+            document.getElementById('formLogin').classList.remove('active');
+            document.getElementById('formCadastro').classList.remove('active');
+
+            if (modo === 'login') {
+                document.getElementById('tabLogin').classList.add('active');
+                document.getElementById('formLogin').classList.add('active');
+            } else {
+                document.getElementById('tabCadastro').classList.add('active');
+                document.getElementById('formCadastro').classList.add('active');
+            }
+        }
+
+        // Transição de Telas Assíncrona Cinematográfica
+        function navegarComTransicao(destinoId) {
+            const loader = document.getElementById('cinemaLoader');
+            const ativa = document.querySelector('.screen.active');
+            const alvo = document.getElementById(destinoId);
+            
+            if(ativa && ativa.id === destinoId) return;
+
+            loader.classList.add('show');
+
+            setTimeout(() => {
+                if(ativa) ativa.classList.remove('active');
+                alvo.classList.add('active');
+
+                if(destinoId === 'feedScreen') renderizarCardDoPet();
+                if(destinoId === 'scheduleScreen') montarSeletorMúltiploEQuiz();
+                if(destinoId === 'matchesScreen') montarListaMatchesTutor();
+                if(destinoId === 'ongsScreen') carregarEstruturaGeografica();
+                if(destinoId === 'profileScreen') carregarLogsDeAuditoriaDoUsuario();
+
+                document.querySelectorAll('.nav-icon-btn').forEach(b => b.classList.remove('active'));
+                const mapeamentoBotoes = {
+                    'feedScreen': 'navFeed', 'matchesScreen': 'navMatches', 'scheduleScreen': 'navAgenda',
+                    'ongsScreen': 'navMap', 'profileScreen': 'navProfile'
+                };
+                if(mapeamentoBotoes[destinoId]) document.getElementById(mapeamentoBotoes[destinoId]).classList.add('active');
+
+                loader.classList.remove('show');
+            }, 180); 
+        }
+
+        // FUNÇÃO DE AUTENTICAÇÃO PADRÃO
+        function autenticarTutor(fluxo) {
+            let email, nome;
+            if (fluxo === 'login') {
+                email = document.getElementById('tutorEmail').value;
+                nome = "Adotante Responsável";
+            } else {
+                email = document.getElementById('cadEmail').value;
+                nome = document.getElementById('cadNome').value.trim() || "Novo Adotante";
+                if (!email || !nome) { alert("Por favor, preencha todos os campos para o cadastro."); return; }
+            }
+
+            inicializarSessaoUsuario(nome, email, `Login efetuado via credenciais (${fluxo}).`);
+        }
+
+        // INTERFACE DO LOGIN SOCIAL (SIMULADO)
+        function autenticarSocial(provedor) {
+            const nomeSocial = `Usuário ${provedor}`;
+            const emailSocial = `${provedor.toLowerCase()}user@gmail.com`;
+            
+            inicializarSessaoUsuario(nomeSocial, emailSocial, `Autenticado com sucesso via Provedor Integrado: ${provedor}.`);
+        }
+
+        // Inicializador de Sessão Único
+        function inicializarSessaoUsuario(nome, email, mensagemLog) {
+            usuarioAtivo = { nome: nome, email: email, matches: [] };
+            if(!logsDeAuditoria[email]) logsDeAuditoria[email] = [];
+            
+            registrarLog(email, mensagemLog);
+            
+            document.getElementById('appNavbar').style.display = "flex";
+            limparFiltrosDeBusca();
+            navegarComTransicao('feedScreen');
+        }
+
+        function sairDoSistema() {
+            registrarLog(usuarioAtivo.email, "Sessão encerrada voluntariamente.");
+            usuarioAtivo = null;
+            document.getElementById('appNavbar').style.display = "none";
+            alternarFormularioAutenticacao('login');
+            navegarComTransicao('loginScreen');
+        }
+
+        function registrarLog(email, textoAcao) {
+            const dataStr = new Date().toLocaleString('pt-BR');
+            if(!logsDeAuditoria[email]) logsDeAuditoria[email] = [];
+            logsDeAuditoria[email].unshift({ time: dataStr, acao: textoAcao });
+        }
+
+        // --- EXIBIÇÃO DA FICHA TÉCNICA DETALHADA DO PET ---
+        function renderizarCardDoPet() {
+            const card = document.getElementById('petCard');
+            if (filtrados.length === 0) {
+                card.style.backgroundImage = "none";
+                document.getElementById('petNomeIdade').innerText = "Nenhum animal nesta busca";
+                document.getElementById('petTagsContainer').innerHTML = "";
+                document.getElementById('petTechBox').innerHTML = "Modifique a localização ou filtros de porte.";
+                return;
+            }
+            const pet = filtrados[indexAtual];
+            card.style.backgroundImage = `url('${pet.foto}')`;
+            document.getElementById('petNomeIdade').innerText = `${pet.nome}, ${pet.idade} ${pet.idade == 1 ? 'ano' : 'anos'}`;
+            
+            document.getElementById('petTagsContainer').innerHTML = `
+                <span class="tag-pill">${pet.especie}</span>
+                <span class="tag-pill">🧬 ${pet.raca}</span>
+                <span class="tag-pill">⚖️ Porte ${pet.porte}</span>
+                <span class="tag-pill loc-pill">🏢 ${pet.localizacao}</span>
+            `;
+
+            document.getElementById('petTechBox').innerHTML = `
+                <div><strong>Situação de Saúde:</strong> ${pet.saude}</div>
+                <div><strong>Nível de Energia:</strong> ${pet.energia}</div>
+                <div><strong>Socialização:</strong> ${pet.socializacao}</div>
+                <div style="margin-top:4px; font-style:italic; color:#94a3b8;">"${pet.bio}"</div>
+            `;
+        }
+
+        function rotacionarPetNoFeed() {
+            if(filtrados.length <= 1) return;
+            indexAtual = (indexAtual + 1) % filtrados.length;
+            renderizarCardDoPet();
+        }
+
+        function vincularMatchDoTutor() {
+            if(filtrados.length === 0) return;
+            const pet = filtrados[indexAtual];
+            if(!usuarioAtivo.matches.some(p => p.id === pet.id)) {
+                usuarioAtivo.matches.push(pet);
+                registrarLog(usuarioAtivo.email, `Demonstrou interesse de adoção pelo pet [${pet.nome}] da unidade [${pet.localizacao}].`);
+                alert(`Você marcou interesse em adotar ${pet.nome}! Vá na aba Adotar para agendar a visita.`);
+            } else {
+                alert(`Você já demonstrou interesse por ${pet.nome}.`);
+            }
+            rotacionarPetNoFeed();
+        }
+
+        // MULTI-SELEÇÃO E ESTRUTURAÇÃO DO FORMULÁRIO
+        function montarSeletorMúltiploEQuiz() {
+            const container = document.getElementById('agendaMultiPetContainer');
+            container.innerHTML = "";
+            if (usuarioAtivo.matches.length === 0) {
+                container.innerHTML = `<div style="font-size:0.8rem; color:#6b7280; padding:10px; text-align:center;">Nenhum pet selecionado. Explore o feed e clique no ❤️ nos animais que deseja adotar!</div>`;
+                return;
+            }
+            usuarioAtivo.matches.forEach(pet => {
+                const item = document.createElement('div');
+                item.className = "checkbox-item";
+                item.innerHTML = `
+                    <input type="checkbox" id="chk_pet_${pet.id}" value="${pet.id}" checked>
+                    <label for="chk_pet_${pet.id}">${pet.nome} (${pet.especie} - ${pet.localizacao})</label>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function processarAgendamentoDoTutor() {
+            const checkboxes = document.querySelectorAll('#agendaMultiPetContainer input[type="checkbox"]:checked');
+            if (checkboxes.length === 0) { alert("Selecione ao menos um animal de interesse para prosseguir."); return; }
+            
+            const dataVisita = document.getElementById('agendaData').value;
+            const horaVisita = document.getElementById('agendaHorario').value;
+            if(!dataVisita) { alert("Por favor, selecione uma data válida para a triagem presencial."); return; }
+
+            const quizCasa = document.getElementById('quizCasa').value;
+            const quizOutrosPets = document.getElementById('quizOutrosPets').value;
+            const quizTempo = document.getElementById('quizTempo').value;
+
+            let idsSelecionados = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            let petsAgendados = usuarioAtivo.matches.filter(p => idsSelecionados.includes(p.id));
+
+            petsAgendados.forEach(pet => {
+                const agendamento = {
+                    id: Date.now() + Math.random(),
+                    pet: pet,
+                    data: dataVisita,
+                    hora: horaVisita,
+                    detalhesCasa: quizCasa,
+                    detalhesOutros: quizOutrosPets,
+                    detalhesTempo: quizTempo
+                };
+                agendamentosGlobais.push(agendamento);
+                registrarLog(usuarioAtivo.email, `Agendamento e Triagem estruturados para [${pet.nome}] no dia ${dataVisita} às ${horaVisita}h.`);
+            });
+
+            usuarioAtivo.matches = usuarioAtivo.matches.filter(p => !idsSelecionados.includes(p.id));
+            alert("Solicitação de adoção e formulário de triagem submetidos com sucesso! A ONG analisará seus dados.");
+            navegarComTransicao('matchesScreen');
+        }
+
+        // MONTAGEM DAS CONEXÕES E DO STATUS DE VISITAS
+        function montarListaMatchesTutor() {
+            const container = document.getElementById('listaMatchesContainer');
+            container.innerHTML = "";
+            
+            let agendadosDoUsuario = agendamentosGlobais.filter(() => true); 
+
+            if (agendadosDoUsuario.length === 0 && usuarioAtivo.matches.length === 0) {
+                container.innerHTML = `<p style="font-size:0.85rem; text-align:center; color:#6b7280; margin-top:20px;">Nenhuma intenção ativa. Explore o feed para começar!</p>`;
+                return;
+            }
+
+            if(usuarioAtivo.matches.length > 0) {
+                const tituloPendentes = document.createElement('h4');
+                tituloPendentes.innerHTML = "Aguardando Agendamento";
+                tituloPendentes.style = "font-size:0.75rem; text-transform:uppercase; color:#ffe066; margin: 10px 0 5px 0;";
+                container.appendChild(tituloPendentes);
+
+                usuarioAtivo.matches.forEach(pet => {
+                    const item = document.createElement('div');
+                    item.className = "ong-list-item";
+                    item.style.borderLeft = "3px solid #ffe066";
+                    item.innerHTML = `
+                        <strong>${pet.nome}</strong> (${pet.especie})<br>
+                        <span style="font-size:0.75rem; color:#9ca3af;">Acomodado em: ${pet.localizacao}</span><br>
+                        <button class="btn" style="padding:4px 8px; font-size:0.7rem; width:auto; margin-top:5px; background:#ffe066; color:#000;" onclick="navegarComTransicao('scheduleScreen')">Agendar Visita</button>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            if(agendadosDoUsuario.length > 0) {
+                const tituloAgendados = document.createElement('h4');
+                tituloAgendados.innerHTML = "Visitas Agendadas e Perfis em Análise";
+                tituloAgendados.style = "font-size:0.75rem; text-transform:uppercase; color:#2ecc71; margin: 15px 0 5px 0;";
+                container.appendChild(tituloAgendados);
+
+                agendadosDoUsuario.forEach(ag => {
+                    const item = document.createElement('div');
+                    item.className = "ong-list-item";
+                    item.style.borderLeft = "3px solid #2ecc71";
+                    item.innerHTML = `
+                        <strong>${ag.pet.nome}</strong> - Visita Agendada<br>
+                        <span style="color:#2ecc71;">📅 Data: ${ag.data} às ${ag.hora}h</span><br>
+                        <span style="font-size:0.72rem; color:#9ca3af;">Local: ${ag.pet.localizacao}</span><br>
+                        <div style="margin-top:5px; font-size:0.7rem; background:rgba(255,255,255,0.02); padding:4px; border-radius:4px;">
+                            <strong>Triagem:</strong> Lar ${ag.detalhesCasa} • Disponibilidade ${ag.detalhesTempo}.
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+        }
+
+        // MAPAS E GEOLOCALIZAÇÃO
+        function carregarEstruturaGeografica() {
+            const container = document.getElementById('ongsListContainer');
+            container.innerHTML = "";
+
+            ongsSantarem.forEach(ong => {
+                const div = document.createElement('div');
+                div.className = "ong-list-item";
+                div.innerHTML = `<strong>${ong.nome}</strong><br><span style="color:#9ca3af; font-size:0.72rem;">📍 ${ong.local}</span>`;
+                container.appendChild(div);
+            });
+
+            setTimeout(() => {
+                if (!mapaInstanciado) {
+                    mapaInstanciado = L.map('map', { zoomControl: false }).setView([-2.443, -54.724], 12);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                        attribution: 'OpenStreetMap'
+                    }).addTo(mapaInstanciado);
+
+                    ongsSantarem.forEach(ong => {
+                        L.marker([ong.lat, ong.lng])
+                         .addTo(mapaInstanciado)
+                         .bindPopup(`<b style="color:#000;">${ong.nome}</b>`);
+                    });
+                } else {
+                    mapaInstanciado.invalidateSize();
+                }
+            }, 50);
+        }
+
+        // CARGA DO REGISTRO DE AUDITORIA DO PERFIL
+        function carregarLogsDeAuditoriaDoUsuario() {
+            document.getElementById('perfilNomeTutor').innerText = usuarioAtivo.nome;
+            document.getElementById('perfilEmailTutor').innerText = usuarioAtivo.email;
+
+            const container = document.getElementById('auditoriaContainer');
+            container.innerHTML = "";
+            
+            const logs = logsDeAuditoria[usuarioAtivo.email] || [];
+            if(logs.length === 0) {
+                container.innerHTML = `<p style="font-size:0.75rem; color:#6b7280;">Nenhuma atividade registrada.</p>`;
+                return;
+            }
+            logs.forEach(l => {
+                const card = document.createElement('div');
+                card.className = "audit-trail-card";
+                card.innerHTML = `<div class="audit-timestamp">${l.time}</div><div>${l.acao}</div>`;
+                container.appendChild(card);
+            });
+        }
+
+        // FILTROS AVANÇADOS DE BUSCA
+        function filtrarCatalogoDePets() {
+            const raca = document.getElementById('filterRaca').value.toLowerCase();
+            const idadeMax = parseInt(document.getElementById('filterIdade').value);
+            const porte = document.getElementById('filterPorte').value;
+            const local = document.getElementById('filterLocalizacao').value;
+
+            filtrados = bancoDePets.filter(pet => {
+                if (raca && !pet.raca.toLowerCase().includes(raca)) return false;
+                if (!isNaN(idadeMax) && pet.idade > idadeMax) return false;
+                if (porte && pet.porte !== porte) return false;
+                if (local && pet.localizacao !== local) return false;
+                return true;
+            });
+
+            indexAtual = 0;
+            renderizarCardDoPet();
+        }
+
+        function limparFiltrosDeBusca() {
+            document.getElementById('filterRaca').value = "";
+            document.getElementById('filterIdade').value = "";
+            document.getElementById('filterPorte').value = "";
+            document.getElementById('filterLocalizacao').value = "";
+            filtrados = [...bancoDePets];
+            indexAtual = 0;
+            if(usuarioAtivo) renderizarCardDoPet();
+        }
+    </script>
 </body>
 </html>
